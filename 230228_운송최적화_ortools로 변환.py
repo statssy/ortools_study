@@ -24,7 +24,7 @@ df_supply = pd.DataFrame({'W1':[35],
 np.random.seed(1)
 nw = len(df_tc.index) #W 창고 개수 : 3
 nf = len(df_tc.columns) #F 공장 개수 :4
-pr = list(product(range(nw), range(nf))) #product 함수는 W(0~2)와 F (0~3)넘버를 중복 없이 짝지어줌 
+pr = list(product(range(nw), range(nf))) #product 함수는 W(0~2)와 F(0~3)넘버를 중복 없이 짝지어줌 
 
 # Create the mip solver with the SCIP backend.
 solver = pywraplp.Solver.CreateSolver('SCIP')
@@ -40,21 +40,28 @@ print('Number of variables =', solver.NumVariables())
 
 objective = solver.Objective()
 for i, j in pr:
-    objective.SetCoefficient(v1[i,j], float(df_tc.iloc[i][j]))
+    objective.SetCoefficient(v1[i,j], int(df_tc.iloc[i][j]))
 objective.SetMinimization()
 
 for i in range(nw):
-    constraint = solver.Constraint(0, float(df_supply.iloc[0][i]))
+    constraint = solver.Constraint(0, int(df_supply.iloc[0][i]))
     for j in range(nf):
         constraint.SetCoefficient(v1[i, j], 1)
 
 for j in range(nf):
-    constraint = solver.Constraint(float(df_demand.iloc[0][j]), solver.infinity())
+    constraint = solver.Constraint(int(df_demand.iloc[0][j]), solver.infinity())
     for i in range(nw):
         constraint.SetCoefficient(v1[i, j], 1)
 
 status = solver.Solve()
 
 if status == pywraplp.Solver.OPTIMAL:
-    print('Solution:')
     print('Objective value =', solver.Objective().Value())
+    for i,j in pr:
+        print(v1[(i,j)].name(), ' = ', v1[(i,j)].solution_value())
+    print()
+    print('Problem solved in %f milliseconds' % solver.wall_time())
+    print('Problem solved in %d iterations' % solver.iterations())
+    print('Problem solved in %d branch-and-bound nodes' % solver.nodes())
+else:
+    print('The problem does not have an optimal solution.')
